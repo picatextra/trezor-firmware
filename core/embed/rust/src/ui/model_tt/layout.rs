@@ -4,14 +4,17 @@ use crate::{
     error::Error,
     micropython::{buffer::Buffer, map::Map, obj::Obj, qstr::Qstr},
     ui::{
-        component::{base::ComponentExt, text::paragraphs::Paragraphs, Child, FormattedText},
+        component::{base::ComponentExt, text::paragraphs::Paragraphs, FormattedText},
         layout::obj::LayoutObj,
     },
     util,
 };
 
 use super::{
-    component::{Button, ButtonMsg, DialogMsg, Frame, HoldToConfirm, HoldToConfirmMsg, SwipePage},
+    component::{
+        Button, ButtonMsg, DialogMsg, Frame, HoldToConfirm, HoldToConfirmMsg, PinKeyboard,
+        PinKeyboardMsg, SwipePage,
+    },
     constant, theme,
 };
 
@@ -44,6 +47,17 @@ where
             HoldToConfirmMsg::Content(c) => Ok(c.try_into()?),
             HoldToConfirmMsg::Confirmed => 1.try_into(),
             HoldToConfirmMsg::Cancelled => 2.try_into(),
+        }
+    }
+}
+
+impl TryFrom<PinKeyboardMsg> for Obj {
+    type Error = Error;
+
+    fn try_from(val: PinKeyboardMsg) -> Result<Self, Self::Error> {
+        match val {
+            PinKeyboardMsg::Confirmed => 1.try_into(),
+            PinKeyboardMsg::Cancelled => 2.try_into(),
         }
     }
 }
@@ -118,11 +132,37 @@ extern "C" fn ui_layout_new_confirm_action(
     unsafe { util::try_with_args_and_kwargs(n_args, args, kwargs, block) }
 }
 
+#[no_mangle]
+extern "C" fn ui_layout_new_pin(n_args: usize, args: *const Obj, kwargs: *const Map) -> Obj {
+    let block = move |_args: &[Obj], kwargs: &Map| {
+        let prompt: Buffer = kwargs.get(Qstr::MP_QSTR_prompt)?.try_into()?;
+        let subprompt: Buffer = kwargs.get(Qstr::MP_QSTR_subprompt)?.try_into()?;
+        let allow_cancel: Option<bool> =
+            kwargs.get(Qstr::MP_QSTR_allow_cancel)?.try_into_option()?;
+        let warning: Option<Buffer> = kwargs.get(Qstr::MP_QSTR_warning)?.try_into_option()?;
+        let obj = LayoutObj::new(
+            PinKeyboard::new(
+                theme::borders(),
+                prompt,
+                subprompt,
+                warning,
+                allow_cancel.unwrap_or(true),
+            )
+            .into_child(),
+        )?;
+        Ok(obj.into())
+    };
+    unsafe { util::try_with_args_and_kwargs(n_args, args, kwargs, block) }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         trace::Trace,
-        ui::model_tt::component::{Button, Dialog},
+        ui::{
+            component::Child,
+            model_tt::component::{Button, Dialog},
+        },
     };
 
     use super::*;

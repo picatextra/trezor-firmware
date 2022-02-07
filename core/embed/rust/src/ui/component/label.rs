@@ -24,7 +24,7 @@ where
 {
     pub fn new(origin: Point, align: Alignment, text: T, style: LabelStyle) -> Self {
         let width = style.font.text_width(&text);
-        let height = style.font.line_height();
+        let height = style.font.text_height();
         let area = match align {
             // `origin` is the top-left point.
             Alignment::Start => Rect {
@@ -86,5 +86,9 @@ where
             self.style.text_color,
             self.style.background_color,
         );
+    }
+
+    fn bounds(&self, sink: &mut dyn FnMut(Rect)) {
+        sink(self.area)
     }
 }
