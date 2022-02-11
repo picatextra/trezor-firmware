@@ -222,7 +222,9 @@ def safety_checks(
 
 
 @cli.command()
-@click.argument("enable", type=ChoiceType({"enable": True, "disable": False}))
+@click.argument(
+    "enable", type=ChoiceType({"enable": True, "disable": False}), default=True
+)
 @with_client
 def experimental_features(client: "TrezorClient", enable: bool) -> str:
     """Enable or disable experimental message types.
