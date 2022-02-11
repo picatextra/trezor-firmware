@@ -95,24 +95,28 @@ def cli() -> None:
 
 
 @cli.command()
-@click.option("-r", "--remove", is_flag=True)
+@click.argument(
+    "enable", type=ChoiceType({"enable": True, "disable": False}), default=True
+)
 @with_client
-def pin(client: "TrezorClient", remove: bool) -> str:
+def pin(client: "TrezorClient", enable: bool) -> str:
     """Set, change or remove PIN."""
-    return device.change_pin(client, remove)
+    return device.change_pin(client, remove=not enable)
 
 
 @cli.command()
-@click.option("-r", "--remove", is_flag=True)
+@click.argument(
+    "enable", type=ChoiceType({"enable": True, "disable": False}), default=True
+)
 @with_client
-def wipe_code(client: "TrezorClient", remove: bool) -> str:
+def wipe_code(client: "TrezorClient", enable: bool) -> str:
     """Set or remove the wipe code.
 
     The wipe code functions as a "self-destruct PIN". If the wipe code is ever
     entered into any PIN entry dialog, then all private data will be immediately
     removed and the device will be reset to factory defaults.
     """
-    return device.change_wipe_code(client, remove)
+    return device.change_wipe_code(client, remove=not enable)
 
 
 @cli.command()
@@ -218,7 +222,7 @@ def safety_checks(
 
 
 @cli.command()
-@click.argument("enable", type=ChoiceType({"on": True, "off": False}))
+@click.argument("enable", type=ChoiceType({"enable": True, "disable": False}))
 @with_client
 def experimental_features(client: "TrezorClient", enable: bool) -> str:
     """Enable or disable experimental message types.
@@ -240,7 +244,7 @@ def passphrase() -> None:
     # and "disable-passphrase". Otherwise `passphrase` would just take an argument.
 
 
-@passphrase.command(name="enabled")
+@passphrase.command(name="enable")
 @click.option("-f/-F", "--force-on-device/--no-force-on-device", default=None)
 @with_client
 def passphrase_enable(client: "TrezorClient", force_on_device: Optional[bool]) -> str:
@@ -250,7 +254,7 @@ def passphrase_enable(client: "TrezorClient", force_on_device: Optional[bool]) -
     )
 
 
-@passphrase.command(name="disabled")
+@passphrase.command(name="disable")
 @with_client
 def passphrase_disable(client: "TrezorClient") -> str:
     """Disable passphrase."""
