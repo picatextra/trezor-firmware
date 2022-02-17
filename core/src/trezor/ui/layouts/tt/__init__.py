@@ -63,6 +63,7 @@ __all__ = (
     "show_warning",
     "confirm_output",
     "confirm_payment_request",
+    "confirm_lightning_swap",
     "confirm_blob",
     "confirm_properties",
     "confirm_total",
@@ -540,6 +541,52 @@ async def confirm_payment_request(
             ctx, content, "confirm_payment_request", ButtonRequestType.ConfirmOutput
         )
     )
+
+
+async def confirm_lightning_swap(
+    ctx: wire.GenericContext,
+    address: str,
+    amount: str,
+    payee: str,
+    ln_amount: str,
+    description: str | None,
+    font_amount: int = ui.NORMAL,  # TODO cleanup @ redesign
+    title: str = "Confirm LN Swap",
+    subtitle: str | None = None,  # TODO cleanup @ redesign
+    color_to: int = ui.FG,  # TODO cleanup @ redesign
+    to_str: str = " to\n",  # TODO cleanup @ redesign
+    to_paginated: bool = False,  # TODO cleanup @ redesign
+    width: int = MONO_ADDR_PER_LINE,
+    width_paginated: int = MONO_ADDR_PER_LINE - 1,
+    br_code: ButtonRequestType = ButtonRequestType.ConfirmOutput,
+    icon: str = ui.ICON_LNSWAP,
+) -> None:
+    header_lines = to_str.count("\n") + int(subtitle is not None)
+    # TODO: make this function more sane
+    address += "\n"
+    address += f"LN payee: {payee}\n"
+    address += f"LN amount: {ln_amount}\n"
+    if description is not None:
+        address += f"LN desc: {description}\n"
+    # ----
+    if len(address) > (TEXT_MAX_LINES - header_lines) * width:
+        para = []
+        if subtitle is not None:
+            para.append((ui.NORMAL, subtitle))
+        para.append((font_amount, amount))
+        if to_paginated:
+            para.append((ui.NORMAL, "to"))
+        para.extend((ui.MONO, line) for line in chunks(address, width_paginated))
+        content: ui.Layout = paginate_paragraphs(para, title, icon, ui.GREEN)
+    else:
+        text = Text(title, icon, ui.YELLOW, new_lines=False)
+        if subtitle is not None:
+            text.normal(subtitle, "\n")
+        text.content = [font_amount, amount, ui.NORMAL, color_to, to_str, ui.FG]
+        text.mono(*chunks_intersperse(address, width))
+        content = Confirm(text)
+
+    await raise_if_cancelled(interact(ctx, content, "confirm_output", br_code))
 
 
 async def should_show_more(
