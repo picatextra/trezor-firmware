@@ -1,11 +1,14 @@
 use core::convert::TryInto;
 
 use crate::{
-    micropython::{buffer::Buffer, map::Map, obj::Obj, qstr::Qstr},
+    micropython::{buffer::Buffer, map::Map, module::Module, obj::Obj, qstr::Qstr},
     ui::{
         component::{text::paragraphs::Paragraphs, FormattedText},
         display,
-        layout::obj::LayoutObj,
+        layout::{
+            obj::LayoutObj,
+            result::{CANCELLED, CONFIRMED},
+        },
     },
     util,
 };
@@ -15,12 +18,7 @@ use super::{
     theme,
 };
 
-#[no_mangle]
-extern "C" fn ui_layout_new_confirm_action(
-    n_args: usize,
-    args: *const Obj,
-    kwargs: *const Map,
-) -> Obj {
+extern "C" fn new_confirm_action(n_args: usize, args: *const Obj, kwargs: *mut Map) -> Obj {
     let block = |_args: &[Obj], kwargs: &Map| {
         let title: Buffer = kwargs.get(Qstr::MP_QSTR_title)?.try_into()?;
         let action: Option<Buffer> = kwargs.get(Qstr::MP_QSTR_action)?.try_into_option()?;
@@ -60,12 +58,7 @@ extern "C" fn ui_layout_new_confirm_action(
     unsafe { util::try_with_args_and_kwargs(n_args, args, kwargs, block) }
 }
 
-#[no_mangle]
-extern "C" fn ui_layout_new_confirm_text(
-    n_args: usize,
-    args: *const Obj,
-    kwargs: *const Map,
-) -> Obj {
+extern "C" fn new_confirm_text(n_args: usize, args: *const Obj, kwargs: *mut Map) -> Obj {
     let block = |_args: &[Obj], kwargs: &Map| {
         let title: Buffer = kwargs.get(Qstr::MP_QSTR_title)?.try_into()?;
         let data: Buffer = kwargs.get(Qstr::MP_QSTR_data)?.try_into()?;
@@ -90,6 +83,15 @@ extern "C" fn ui_layout_new_confirm_text(
     };
     unsafe { util::try_with_args_and_kwargs(n_args, args, kwargs, block) }
 }
+
+#[no_mangle]
+pub static mp_module_trezorui2: Module = obj_module!(&obj_dict!(obj_map! {
+    Qstr::MP_QSTR___name__ => Qstr::MP_QSTR_trezorui2.to_obj(),
+    Qstr::MP_QSTR_CONFIRMED => CONFIRMED.as_obj(),
+    Qstr::MP_QSTR_CANCELLED => CANCELLED.as_obj(),
+    Qstr::MP_QSTR_confirm_action => obj_fn_kw!(0, new_confirm_action).as_obj(),
+    Qstr::MP_QSTR_confirm_text => obj_fn_kw!(0, new_confirm_text).as_obj(),
+}));
 
 #[cfg(test)]
 mod tests {

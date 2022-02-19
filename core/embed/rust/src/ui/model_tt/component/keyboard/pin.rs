@@ -18,7 +18,7 @@ use crate::{
 };
 
 pub enum PinKeyboardMsg {
-    Confirmed,
+    Confirmed(Vec<u8, MAX_LENGTH>),
     Cancelled,
 }
 
@@ -145,7 +145,7 @@ impl Component for PinKeyboard {
 
     fn event(&mut self, ctx: &mut EventCtx, event: Event) -> Option<Self::Msg> {
         if let Some(Clicked) = self.confirm_btn.event(ctx, event) {
-            return Some(PinKeyboardMsg::Confirmed);
+            return Some(PinKeyboardMsg::Confirmed(self.digits.clone()));
         }
         if let Some(Clicked) = self.cancel_btn.event(ctx, event) {
             return Some(PinKeyboardMsg::Cancelled);
@@ -237,5 +237,13 @@ impl Component for PinDots {
                 4,
             );
         }
+    }
+}
+
+#[cfg(feature = "ui_debug")]
+impl crate::trace::Trace for PinKeyboard {
+    fn trace(&self, t: &mut dyn crate::trace::Tracer) {
+        t.open("PinKeyboard");
+        t.close();
     }
 }

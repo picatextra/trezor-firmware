@@ -2,17 +2,22 @@ use core::convert::{TryFrom, TryInto};
 
 use crate::{
     error::Error,
-    micropython::{buffer::Buffer, map::Map, obj::Obj, qstr::Qstr},
+    micropython::{buffer::Buffer, map::Map, module::Module, obj::Obj, qstr::Qstr},
     ui::{
-        component::{base::ComponentExt, text::paragraphs::Paragraphs, Child, FormattedText},
-        display,
-        layout::obj::LayoutObj,
+        component::{base::ComponentExt, text::paragraphs::Paragraphs},
+        layout::{
+            obj::LayoutObj,
+            result::{CANCELLED, CONFIRMED},
+        },
     },
     util,
 };
 
 use super::{
-    component::{Button, ButtonMsg, DialogMsg, Frame, HoldToConfirm, HoldToConfirmMsg, SwipePage},
+    component::{
+        Button, ButtonMsg, DialogMsg, Frame, HoldToConfirmMsg, PinKeyboard, PinKeyboardMsg,
+        SwipePage,
+    },
     theme,
 };
 
@@ -26,8 +31,8 @@ where
     fn try_from(val: DialogMsg<T, ButtonMsg, ButtonMsg>) -> Result<Self, Self::Error> {
         match val {
             DialogMsg::Content(c) => Ok(c.try_into()?),
-            DialogMsg::Left(ButtonMsg::Clicked) => 1.try_into(),
-            DialogMsg::Right(ButtonMsg::Clicked) => 2.try_into(),
+            DialogMsg::Left(ButtonMsg::Clicked) => Ok(CANCELLED.as_obj()),
+            DialogMsg::Right(ButtonMsg::Clicked) => Ok(CONFIRMED.as_obj()),
             _ => Ok(Obj::const_none()),
         }
     }
@@ -43,33 +48,33 @@ where
     fn try_from(val: HoldToConfirmMsg<T>) -> Result<Self, Self::Error> {
         match val {
             HoldToConfirmMsg::Content(c) => Ok(c.try_into()?),
-            HoldToConfirmMsg::Confirmed => 1.try_into(),
-            HoldToConfirmMsg::Cancelled => 2.try_into(),
+            HoldToConfirmMsg::Confirmed => Ok(CONFIRMED.as_obj()),
+            HoldToConfirmMsg::Cancelled => Ok(CANCELLED.as_obj()),
         }
     }
 }
 
-#[no_mangle]
-extern "C" fn ui_layout_new_example(_param: Obj) -> Obj {
+impl TryFrom<PinKeyboardMsg> for Obj {
+    type Error = Error;
+
+    fn try_from(val: PinKeyboardMsg) -> Result<Self, Self::Error> {
+        let result: (Obj, Obj) = match val {
+            PinKeyboardMsg::Cancelled => (CANCELLED.as_obj(), Obj::const_none()),
+            PinKeyboardMsg::Confirmed(pin) => (CONFIRMED.as_obj(), pin.as_slice().try_into()?),
+        };
+        result.try_into()
+    }
+}
+
+extern "C" fn new_request_pin(_param: Obj) -> Obj {
     let block = move || {
-        let layout = LayoutObj::new(HoldToConfirm::new(display::screen(), |area| {
-            FormattedText::new::<theme::TTDefaultText>(
-                area,
-                "Testing text layout, with some text, and some more text. And {param}",
-            )
-            .with(b"param", b"parameters!")
-        }))?;
+        let layout = LayoutObj::new(PinKeyboard::new(theme::borders(), b"Enter PIN", b""))?;
         Ok(layout.into())
     };
     unsafe { util::try_or_raise(block) }
 }
 
-#[no_mangle]
-extern "C" fn ui_layout_new_confirm_action(
-    n_args: usize,
-    args: *const Obj,
-    kwargs: *const Map,
-) -> Obj {
+extern "C" fn new_confirm_action(n_args: usize, args: *const Obj, kwargs: *mut Map) -> Obj {
     let block = move |_args: &[Obj], kwargs: &Map| {
         let title: Buffer = kwargs.get(Qstr::MP_QSTR_title)?.try_into()?;
         let action: Option<Buffer> = kwargs.get(Qstr::MP_QSTR_action)?.try_into_option()?;
@@ -119,11 +124,24 @@ extern "C" fn ui_layout_new_confirm_action(
     unsafe { util::try_with_args_and_kwargs(n_args, args, kwargs, block) }
 }
 
+#[no_mangle]
+pub static mp_module_trezorui2: Module = obj_module!(&obj_dict!(obj_map! {
+    Qstr::MP_QSTR___name__ => Qstr::MP_QSTR_trezorui2.to_obj(),
+    Qstr::MP_QSTR_CONFIRMED => CONFIRMED.as_obj(),
+    Qstr::MP_QSTR_CANCELLED => CANCELLED.as_obj(),
+    Qstr::MP_QSTR_confirm_action => obj_fn_kw!(0, new_confirm_action).as_obj(),
+    Qstr::MP_QSTR_request_pin => obj_fn_1!(new_request_pin).as_obj(),
+}));
+
 #[cfg(test)]
 mod tests {
     use crate::{
         trace::Trace,
-        ui::model_tt::component::{Button, Dialog},
+        ui::{
+            component::{Child, FormattedText},
+            display,
+            model_tt::component::{Button, Dialog},
+        },
     };
 
     use super::*;

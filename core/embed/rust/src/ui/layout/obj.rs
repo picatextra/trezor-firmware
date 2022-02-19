@@ -16,6 +16,7 @@ use crate::{
     ui::{
         component::{Child, Component, Event, EventCtx, Never, PageMsg, TimerToken},
         geometry::Rect,
+        layout::result::{CANCELLED, CONFIRMED},
     },
     util,
 };
@@ -315,7 +316,8 @@ impl<T> TryFrom<PageMsg<T, bool>> for Obj {
     fn try_from(val: PageMsg<T, bool>) -> Result<Self, Self::Error> {
         match val {
             PageMsg::Content(_) => Err(Error::TypeError),
-            PageMsg::Controls(c) => Ok(c.into()),
+            PageMsg::Controls(true) => Ok(CONFIRMED.as_obj()),
+            PageMsg::Controls(false) => Ok(CANCELLED.as_obj()),
         }
     }
 }
