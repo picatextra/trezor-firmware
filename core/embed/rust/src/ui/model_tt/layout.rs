@@ -6,7 +6,7 @@ use crate::{
     ui::{
         component::{base::ComponentExt, text::paragraphs::Paragraphs},
         layout::{
-            obj::LayoutObj,
+            obj::{ComponentMsgObj, LayoutObj},
             result::{CANCELLED, CONFIRMED},
         },
     },
@@ -54,13 +54,11 @@ where
     }
 }
 
-impl TryFrom<PinKeyboardMsg> for Obj {
-    type Error = Error;
-
-    fn try_from(val: PinKeyboardMsg) -> Result<Self, Self::Error> {
-        let result: (Obj, Obj) = match val {
+impl ComponentMsgObj for PinKeyboard {
+    fn msg_try_into_obj(&self, msg: Self::Msg) -> Result<Obj, Error> {
+        let result: (Obj, Obj) = match msg {
             PinKeyboardMsg::Cancelled => (CANCELLED.as_obj(), Obj::const_none()),
-            PinKeyboardMsg::Confirmed(pin) => (CONFIRMED.as_obj(), pin.as_slice().try_into()?),
+            PinKeyboardMsg::Confirmed => (CONFIRMED.as_obj(), self.pin().try_into()?),
         };
         result.try_into()
     }

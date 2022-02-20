@@ -18,7 +18,7 @@ use crate::{
 };
 
 pub enum PinKeyboardMsg {
-    Confirmed(Vec<u8, MAX_LENGTH>),
+    Confirmed,
     Cancelled,
 }
 
@@ -145,7 +145,7 @@ impl Component for PinKeyboard {
 
     fn event(&mut self, ctx: &mut EventCtx, event: Event) -> Option<Self::Msg> {
         if let Some(Clicked) = self.confirm_btn.event(ctx, event) {
-            return Some(PinKeyboardMsg::Confirmed(self.digits.clone()));
+            return Some(PinKeyboardMsg::Confirmed);
         }
         if let Some(Clicked) = self.cancel_btn.event(ctx, event) {
             return Some(PinKeyboardMsg::Cancelled);
