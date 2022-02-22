@@ -1,3 +1,21 @@
+"""
+Automatic generator of documentation about CI jobs.
+Analyzes all .yml files connected with CI, takes the most important information
+and writes it into a README file.
+
+Features:
+- reads a job description from a comment above job definition
+- includes a link to each file and also to job definition
+- includes a script definition in a code block
+
+Usage:
+- put comments (starting with "#") directly above the job definition in .yml file
+
+Running the script:
+- `python generate_docs.py` to generate the documentation
+- `python generate_docs.py --test` to check if documentation is up-to-date
+"""
+
 import argparse
 import filecmp
 import os
@@ -25,32 +43,31 @@ args = parser.parse_args()
 
 class DocsGenerator:
     def __init__(self) -> None:
-        # Navigating ourselves to the root directory, so the relative
+        # Going to the root directory, so the relative
         # locations of CI files are valid
-        os.chdir(Path(__file__).parent.resolve().parent.resolve())
+        os.chdir(Path(__file__).resolve().parent.parent)
 
         self.GITLAB_CI_FILE = ".gitlab-ci.yml"
-        self.DOC_FILE = "ci/trial_docs.md"
+        self.DOC_FILE = "docs/ci/jobs.md"
 
         # Some keywords that are not job definitions and we should not care about them
         self.NOT_JOBS = [
             "variables:",
             "image:",
+            ".gitlab_caching:",
         ]
 
-        self.ALL_JOBS = OrderedDict()
+        self.ALL_JOBS: Dict[str, Dict[str, Any]] = OrderedDict()
 
         self.FILES = self.get_all_ci_files()
 
     def generate_docs(self) -> None:
         """Whole pipeline of getting and saving the CI information."""
         for file in self.FILES:
-            file_info = {}
-            file_info["jobs"] = self.get_jobs_from_file(file)
-            file_info["overall_description"] = self.get_overall_description_from_file(
-                file
-            )
-            self.ALL_JOBS[file] = file_info
+            self.ALL_JOBS[file] = {
+                "jobs": self.get_jobs_from_file(file),
+                "overall_description": self.get_overall_description_from_file(file),
+            }
 
         self.save_docs_into_file()
 
@@ -61,7 +78,7 @@ class DocsGenerator:
         Exit with non-zero exit code when these files do not match.
         """
         already_filled_doc_file = self.DOC_FILE
-        self.DOC_FILE = "new_file.md"
+        self.DOC_FILE = "new_file_temp.md"
 
         try:
             self.generate_docs()
@@ -95,7 +112,7 @@ class DocsGenerator:
     @staticmethod
     def get_overall_description_from_file(file: str) -> List[str]:
         """Looking for comments at the very beginning of the file."""
-        description_lines = []
+        description_lines: List[str] = []
         with open(file, "r") as f:
             for line in f:
                 if line.startswith("#"):
@@ -117,23 +134,26 @@ class DocsGenerator:
         # Taking all the comments above a non-indented non-comment, which is
         # always a job definition, unless defined in NOT_JOBS
         with open(file, "r") as f:
-            comment_buffer = []
+            comment_buffer: List[str] = []
             for index, line in enumerate(f):
                 if line.startswith("#"):
                     # Taking just the text - no hashes, no whitespace
                     comment_buffer.append(line.strip("# \n"))
                 else:
-                    if re.search(r"\A\w", line) and not any(
+                    # regex: first character of a line is a word-character or a dot
+                    if re.search(r"\A[\w\.]", line) and not any(
                         [line.startswith(not_job) for not_job in self.NOT_JOBS]
                     ):
                         job_name = line.rstrip(":\n")
-                        all_jobs[job_name] = {
-                            "description": comment_buffer,
-                            "line_no": index + 1,
-                            "script": gitlab_file_content[job_name].get(
-                                "script", ["No script defined, probably extends parent"]
-                            ),
-                        }
+                        if job_name in gitlab_file_content:
+                            all_jobs[job_name] = {
+                                "description": comment_buffer,
+                                "line_no": index + 1,
+                                "script": gitlab_file_content[job_name].get(
+                                    "script",
+                                    ["No script defined, probably extends another job"],
+                                ),
+                            }
                     comment_buffer = []
 
         return all_jobs
@@ -151,7 +171,7 @@ class DocsGenerator:
                 f"Latest CI pipeline of master branch can be seen at [{latest_master}]({latest_master})\n"
             )
 
-            # TODO: test-hw are run inside test stage, maybe unite it under i
+            # TODO: test-hw are run inside test stage, maybe unite it under it
             for file, file_info in self.ALL_JOBS.items():
                 # Generating header with a link to the file
                 doc_file.write(
