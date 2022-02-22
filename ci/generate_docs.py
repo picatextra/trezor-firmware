@@ -130,7 +130,9 @@ class DocsGenerator:
                         all_jobs[job_name] = {
                             "description": comment_buffer,
                             "line_no": index + 1,
-                            "script": gitlab_file_content[job_name]["script"],
+                            "script": gitlab_file_content[job_name].get(
+                                "script", ["No script defined, probably extends parent"]
+                            ),
                         }
                     comment_buffer = []
 
