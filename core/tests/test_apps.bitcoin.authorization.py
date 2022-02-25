@@ -20,7 +20,7 @@ class TestAuthorization(unittest.TestCase):
         self.msg_auth = AuthorizeCoinJoin(
             coordinator="www.example.com",
             max_total_fee=40000,
-            fee_per_anonymity=int(0.003 * 10**9),
+            max_fee_rate=int(0.3 * 10**8),
             address_n=[H_(84), H_(0), H_(0)],
             coin_name=self.coin.coin_name,
             script_type=InputScriptType.SPENDWITNESS,

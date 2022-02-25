@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from apps.common.coininfo import CoinInfo
 
-FEE_PER_ANONYMITY_DECIMALS = const(9)
+FEE_RATE_DECIMALS = const(8)
 
 
 class CoinJoinAuthorization:

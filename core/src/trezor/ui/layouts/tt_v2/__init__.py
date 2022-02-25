@@ -407,7 +407,7 @@ async def confirm_modify_fee(
 
 
 async def confirm_coinjoin(
-    ctx: wire.GenericContext, fee_per_anonymity: str | None, total_fee: str
+    ctx: wire.GenericContext, max_fee_rate: str | None, total_fee: str
 ) -> None:
     raise NotImplementedError
 

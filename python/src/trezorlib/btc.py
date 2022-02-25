@@ -407,7 +407,7 @@ def authorize_coinjoin(
     max_total_fee: int,
     n: "Address",
     coin_name: str,
-    fee_per_anonymity: Optional[int] = None,
+    max_fee_rate: Optional[int] = None,
     script_type: messages.InputScriptType = messages.InputScriptType.SPENDADDRESS,
 ) -> "MessageType":
     return client.call(
@@ -416,7 +416,7 @@ def authorize_coinjoin(
             max_total_fee=max_total_fee,
             address_n=n,
             coin_name=coin_name,
-            fee_per_anonymity=fee_per_anonymity,
+            max_fee_rate=max_fee_rate,
             script_type=script_type,
         )
     )

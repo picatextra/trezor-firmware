@@ -58,8 +58,8 @@ def test_sign_tx(client: Client):
         btc.authorize_coinjoin(
             client,
             coordinator="www.example.com",
-            max_total_fee=10_010,
-            fee_per_anonymity=5_000_000,  # 0.005 %
+            max_total_fee=2 * (36_445 + 5_000),
+            max_fee_rate=50_000_000,  # 0.5 %
             n=parse_path("m/84h/1h/0h"),
             coin_name="Testnet",
             script_type=messages.InputScriptType.SPENDWITNESS,
@@ -139,21 +139,21 @@ def test_sign_tx(client: Client):
         messages.TxOutputType(
             # tb1qr5p6f5sk09sms57ket074vywfymuthlgud7xyx
             address_n=parse_path("m/84h/1h/0h/1/2"),
-            amount=7_289_000 - 50_000 - 5 - 5_000,
+            amount=7_289_000 - 50_000 - 36_445 - 5_000,
             script_type=messages.OutputScriptType.PAYTOWITNESS,
             payment_req_index=0,
         ),
         # Other's change output.
         messages.TxOutputType(
             address="tb1q9cqhdr9ydetjzrct6tyeuccws9505hl96azwxk",
-            amount=100_000 - 50_000 - 5 - 5_000,
+            amount=100_000 - 50_000 - 500 - 5_000,
             script_type=messages.OutputScriptType.PAYTOWITNESS,
             payment_req_index=0,
         ),
         # Coordinator's output.
         messages.TxOutputType(
             address="mvbu1Gdy8SUjTenqerxUaZyYjmveZvt33q",
-            amount=10,
+            amount=36_945,
             script_type=messages.OutputScriptType.PAYTOWITNESS,
             payment_req_index=0,
         ),
@@ -215,7 +215,7 @@ def test_sign_tx(client: Client):
 
     assert (
         serialized_tx.hex()
-        == "010000000001028abbd1cf69e00fbf60fa3ba475dccdbdba4a859ffa6bfd1ee820a75b1be2b7e50000000000ffffffff7b010c5faeb41cc5c253121b6bf69bf1a7c5867cd7f2d91569fea0ecd311b8650100000000ffffffff0550c3000000000000160014b7a51ede0a66ae36558a3ab097ad86bbd800786150c3000000000000160014167dae080bca35c9ea49c0c8335dcc4b252a1d70cb616e00000000001600141d03a4d2167961b853d6cadfeab08e4937c5dfe8c3af0000000000001600142e01768ca46e57210f0bd2c99e630e8168fa5fe50a000000000000001976a914a579388225827d9f2fe9014add644487808c695d88ac00024730440220694105071db8c6c8ba3d385d01694b6f7c17546327ab26d4c53a6503fee301e202202dd310c23a195a6cebc904b91ebd15d782e6dacd08670a72ade2795e7d3ff4ec012103505647c017ff2156eb6da20fae72173d3b681a1d0a629f95f49e884db300689f00000000"
+        == "010000000001028abbd1cf69e00fbf60fa3ba475dccdbdba4a859ffa6bfd1ee820a75b1be2b7e50000000000ffffffff7b010c5faeb41cc5c253121b6bf69bf1a7c5867cd7f2d91569fea0ecd311b8650100000000ffffffff0550c3000000000000160014b7a51ede0a66ae36558a3ab097ad86bbd800786150c3000000000000160014167dae080bca35c9ea49c0c8335dcc4b252a1d7073d36d00000000001600141d03a4d2167961b853d6cadfeab08e4937c5dfe8d4ad0000000000001600142e01768ca46e57210f0bd2c99e630e8168fa5fe551900000000000001976a914a579388225827d9f2fe9014add644487808c695d88ac0002483045022100fc72cc5f8af023a1ac1fc587bbcae88ce7a2629521e6b14644380f7f7d87df46022043ae199719eef53e526f2db81a889b1971e2c4a42595d39d103e0a5b7295dcf7012103505647c017ff2156eb6da20fae72173d3b681a1d0a629f95f49e884db300689f00000000"
     )
 
     # Test for a second time.
@@ -249,8 +249,8 @@ def test_unfair_fee(client: Client):
         btc.authorize_coinjoin(
             client,
             coordinator="www.example.com",
-            max_total_fee=10_000,
-            fee_per_anonymity=5_000_000,  # 0.005 %
+            max_total_fee=100_000,
+            max_fee_rate=50_000_000,  # 0.5 %
             n=parse_path("m/84h/1h/0h"),
             coin_name="Testnet",
             script_type=messages.InputScriptType.SPENDWITNESS,
@@ -300,21 +300,21 @@ def test_unfair_fee(client: Client):
         messages.TxOutputType(
             # tb1qr5p6f5sk09sms57ket074vywfymuthlgud7xyx
             address_n=parse_path("m/84h/1h/0h/1/2"),
-            amount=7_289_000 - 50_000 - 5 - 6_000,  # unfair mining fee
+            amount=7_289_000 - 50_000 - 36_445 - 6_000,  # unfair mining fee
             script_type=messages.OutputScriptType.PAYTOWITNESS,
             payment_req_index=0,
         ),
         # Other's change output.
         messages.TxOutputType(
             address="tb1q9cqhdr9ydetjzrct6tyeuccws9505hl96azwxk",
-            amount=100_000 - 50_000 - 5 - 4_000,
+            amount=100_000 - 50_000 - 500 - 4_000,
             script_type=messages.OutputScriptType.PAYTOWITNESS,
             payment_req_index=0,
         ),
         # Coordinator's output.
         messages.TxOutputType(
             address="mvbu1Gdy8SUjTenqerxUaZyYjmveZvt33q",
-            amount=10,
+            amount=36_945,
             script_type=messages.OutputScriptType.PAYTOWITNESS,
             payment_req_index=0,
         ),

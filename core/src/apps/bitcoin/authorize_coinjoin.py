@@ -9,7 +9,7 @@ from trezor.ui.layouts import confirm_action, confirm_coinjoin
 from apps.common import authorization
 from apps.common.paths import validate_path
 
-from .authorization import FEE_PER_ANONYMITY_DECIMALS
+from .authorization import FEE_RATE_DECIMALS
 from .common import BIP32_WALLET_DEPTH
 from .keychain import validate_path_against_script_type, with_keychain
 from .sign_tx.layout import format_coin_amount
@@ -53,16 +53,14 @@ async def authorize_coinjoin(
         icon=ui.ICON_RECOVERY,
     )
 
-    if msg.fee_per_anonymity:
-        fee_per_anonymity: str | None = format_amount(
-            msg.fee_per_anonymity, FEE_PER_ANONYMITY_DECIMALS
-        )
+    if msg.max_fee_rate:
+        max_fee_rate: str | None = format_amount(msg.max_fee_rate, FEE_RATE_DECIMALS)
     else:
-        fee_per_anonymity = None
+        max_fee_rate = None
 
     await confirm_coinjoin(
         ctx,
-        fee_per_anonymity,
+        max_fee_rate,
         format_coin_amount(msg.max_total_fee, coin, msg.amount_unit),
     )
 

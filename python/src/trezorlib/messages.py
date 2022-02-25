@@ -1566,7 +1566,7 @@ class AuthorizeCoinJoin(protobuf.MessageType):
     FIELDS = {
         1: protobuf.Field("coordinator", "string", repeated=False, required=True),
         2: protobuf.Field("max_total_fee", "uint64", repeated=False, required=True),
-        3: protobuf.Field("fee_per_anonymity", "uint32", repeated=False, required=False),
+        3: protobuf.Field("max_fee_rate", "uint32", repeated=False, required=False),
         4: protobuf.Field("address_n", "uint32", repeated=True, required=False),
         5: protobuf.Field("coin_name", "string", repeated=False, required=False),
         6: protobuf.Field("script_type", "InputScriptType", repeated=False, required=False),
@@ -1579,7 +1579,7 @@ class AuthorizeCoinJoin(protobuf.MessageType):
         coordinator: "str",
         max_total_fee: "int",
         address_n: Optional[Sequence["int"]] = None,
-        fee_per_anonymity: Optional["int"] = 0,
+        max_fee_rate: Optional["int"] = 0,
         coin_name: Optional["str"] = 'Bitcoin',
         script_type: Optional["InputScriptType"] = InputScriptType.SPENDADDRESS,
         amount_unit: Optional["AmountUnit"] = AmountUnit.BITCOIN,
@@ -1587,7 +1587,7 @@ class AuthorizeCoinJoin(protobuf.MessageType):
         self.address_n: Sequence["int"] = address_n if address_n is not None else []
         self.coordinator = coordinator
         self.max_total_fee = max_total_fee
-        self.fee_per_anonymity = fee_per_anonymity
+        self.max_fee_rate = max_fee_rate
         self.coin_name = coin_name
         self.script_type = script_type
         self.amount_unit = amount_unit
