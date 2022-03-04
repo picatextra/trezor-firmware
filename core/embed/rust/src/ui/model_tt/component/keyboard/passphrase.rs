@@ -1,12 +1,15 @@
 use crate::ui::{
     component::{base::ComponentExt, Child, Component, Event, EventCtx, Never},
     display,
-    geometry::{Grid, Rect},
+    geometry::{Grid, Insets, Offset, Rect},
     model_tt::component::{
         button::{Button, ButtonContent, ButtonMsg::Clicked},
-        keyboard::common::{array_map_enumerate, MultiTapKeyboard, TextBox},
+        keyboard::common::{
+            array_map_enumerate, paint_pending_marker, MultiTapKeyboard, TextBox,
+            HEADER_PADDING_SIDE,
+        },
         swipe::{Swipe, SwipeDirection},
-        theme,
+        theme, ScrollBar,
     },
 };
 
@@ -21,7 +24,8 @@ pub struct PassphraseKeyboard {
     back: Child<Button<&'static str>>,
     confirm: Child<Button<&'static str>>,
     keys: [[Child<Button<&'static str>>; KEY_COUNT]; PAGE_COUNT],
-    key_page: usize,
+    scrollbar: ScrollBar,
+    fade: bool,
 }
 
 const STARTING_PAGE: usize = 1;
@@ -39,22 +43,31 @@ const MAX_LENGTH: usize = 50;
 
 impl PassphraseKeyboard {
     pub fn new(area: Rect) -> Self {
-        let input_area = Grid::new(area, 5, 1).row_col(0, 0);
-        let confirm_btn_area = Grid::new(area, 5, 3).cell(14);
-        let back_btn_area = Grid::new(area, 5, 3).cell(12);
-        let key_grid = Grid::new(area, 5, 3);
+        let input_area = Grid::new(area, 5, 1)
+            .with_spacing(theme::KEYBOARD_SPACING)
+            .row_col(0, 0);
+
+        let (input_area, scroll_area) = input_area.split_bottom(ScrollBar::DOT_SIZE);
+        let input_area =
+            input_area.inset(Insets::new(0, HEADER_PADDING_SIDE, 2, HEADER_PADDING_SIDE));
+
+        let key_grid = Grid::new(area, 5, 3).with_spacing(theme::KEYBOARD_SPACING);
+        let confirm_btn_area = key_grid.cell(14);
+        let back_btn_area = key_grid.cell(12);
 
         Self {
             page_swipe: Swipe::horizontal(area),
             input: Input::new(input_area).into_child(),
-            confirm: Button::with_text(confirm_btn_area, "Confirm")
+            confirm: Button::with_icon(confirm_btn_area, theme::ICON_CONFIRM)
                 .styled(theme::button_confirm())
                 .into_child(),
-            back: Button::with_text(back_btn_area, "Back")
-                .styled(theme::button_clear())
+            back: Button::with_icon(back_btn_area, theme::ICON_BACK)
+                .styled(theme::button_reset())
+                .initially_enabled(false)
                 .into_child(),
             keys: Self::generate_keyboard(&key_grid),
-            key_page: STARTING_PAGE,
+            scrollbar: ScrollBar::horizontal(scroll_area, PAGE_COUNT, STARTING_PAGE),
+            fade: false,
         }
     }
 
@@ -92,18 +105,22 @@ impl PassphraseKeyboard {
 
     fn on_page_swipe(&mut self, ctx: &mut EventCtx, swipe: SwipeDirection) {
         // Change the page number.
-        self.key_page = match swipe {
-            SwipeDirection::Left => (self.key_page as isize + 1) as usize % PAGE_COUNT,
-            SwipeDirection::Right => (self.key_page as isize - 1) as usize % PAGE_COUNT,
-            _ => self.key_page,
+        let key_page = self.scrollbar.active_page;
+        let key_page = match swipe {
+            SwipeDirection::Left => (key_page as isize + 1) as usize % PAGE_COUNT,
+            SwipeDirection::Right => (key_page as isize - 1) as usize % PAGE_COUNT,
+            _ => key_page,
         };
+        self.scrollbar.go_to(key_page);
         // Clear the pending state.
         self.input
             .mutate(ctx, |ctx, i| i.multi_tap.clear_pending_state(ctx));
         // Make sure to completely repaint the buttons.
-        for btn in &mut self.keys[self.key_page] {
+        for btn in &mut self.keys[key_page] {
             btn.request_complete_repaint(ctx);
         }
+        // Reset backlight to normal level on next paint.
+        self.fade = true;
     }
 
     fn after_edit(&mut self, ctx: &mut EventCtx) {
@@ -147,7 +164,7 @@ impl Component for PassphraseKeyboard {
                 None
             };
         }
-        for (key, btn) in self.keys[self.key_page].iter_mut().enumerate() {
+        for (key, btn) in self.keys[self.scrollbar.active_page].iter_mut().enumerate() {
             if let Some(Clicked) = btn.event(ctx, event) {
                 // Key button was clicked. If this button is pending, let's cycle the pending
                 // character in textbox. If not, let's just append the first character.
@@ -165,10 +182,16 @@ impl Component for PassphraseKeyboard {
 
     fn paint(&mut self) {
         self.input.paint();
+        self.scrollbar.paint();
         self.confirm.paint();
         self.back.paint();
-        for btn in &mut self.keys[self.key_page] {
+        for btn in &mut self.keys[self.scrollbar.active_page] {
             btn.paint();
+        }
+        if self.fade {
+            self.fade = false;
+            // Note that this is blocking and takes some time.
+            display::fade_backlight(theme::BACKLIGHT_NORMAL);
         }
     }
 }
@@ -197,14 +220,34 @@ impl Component for Input {
     }
 
     fn paint(&mut self) {
-        let style = theme::label_default();
+        const TEXT_OFFSET: Offset = Offset::y(8);
 
+        let style = theme::label_default();
+        let text_baseline = self.area.bottom_left() - TEXT_OFFSET;
+        let text = self.textbox.content().as_bytes();
+
+        // Possible optimization is to redraw the background only when pending character
+        // is replaced, or only draw rectangle over the pending character and
+        // marker.
+        display::rect_fill(self.area, theme::BG);
         display::text(
-            self.area.bottom_left(),
-            self.textbox.content().as_bytes(),
+            text_baseline,
+            text,
             style.font,
             style.text_color,
             style.background_color,
         );
+        // Paint the pending marker.
+        if self.multi_tap.pending_key().is_some() {
+            paint_pending_marker(text_baseline, text, style.font, style.text_color);
+        }
+    }
+}
+
+#[cfg(feature = "ui_debug")]
+impl crate::trace::Trace for PassphraseKeyboard {
+    fn trace(&self, t: &mut dyn crate::trace::Tracer) {
+        t.open("PassphraseKeyboard");
+        t.close();
     }
 }

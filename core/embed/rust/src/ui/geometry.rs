@@ -419,7 +419,7 @@ impl Grid {
 
 #[derive(Copy, Clone)]
 pub struct LinearLayout {
-    axis: Axis,
+    pub axis: Axis,
     align: Alignment,
     spacing: i32,
 }

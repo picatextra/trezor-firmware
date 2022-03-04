@@ -86,4 +86,9 @@ where
             self.inner.paint();
         }
     }
+
+    fn bounds(&self, sink: &mut dyn FnMut(Rect)) {
+        sink(self.pad.area);
+        self.inner.bounds(sink);
+    }
 }

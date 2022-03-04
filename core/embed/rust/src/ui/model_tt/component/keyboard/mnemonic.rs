@@ -1,6 +1,6 @@
 use crate::ui::{
     component::{Child, Component, Event, EventCtx, Label, Maybe},
-    geometry::{Grid, Rect},
+    geometry::{Grid, Offset, Rect},
     model_tt::{
         component::{keyboard::common::array_map_enumerate, Button, ButtonMsg},
         theme,
@@ -29,11 +29,11 @@ where
     T: MnemonicInput,
 {
     pub fn new(area: Rect, prompt: &'static [u8]) -> Self {
-        let grid = Grid::new(area, 3, 4);
+        let grid = Grid::new(area, 4, 3).with_spacing(theme::KEYBOARD_SPACING);
         let back_area = grid.row_col(0, 0);
         let input_area = grid.row_col(0, 1).union(grid.row_col(0, 3));
         let prompt_area = grid.row_col(0, 0).union(grid.row_col(0, 3));
-        let prompt_origin = prompt_area.top_left();
+        let prompt_origin = prompt_area.center() - Offset::y(theme::FONT_MEDIUM.line_height() / 2);
 
         let input = T::new(input_area);
         let keys = T::keys();
@@ -42,7 +42,7 @@ where
             prompt: Child::new(Maybe::visible(
                 prompt_area,
                 theme::BG,
-                Label::left_aligned(prompt_origin, prompt, theme::label_default()),
+                Label::centered(prompt_origin, prompt, theme::label_keyboard()),
             )),
             back: Child::new(Maybe::hidden(
                 back_area,
@@ -142,6 +142,15 @@ where
             btn.paint();
         }
     }
+
+    fn bounds(&self, sink: &mut dyn FnMut(Rect)) {
+        self.prompt.bounds(sink);
+        self.input.bounds(sink);
+        self.back.bounds(sink);
+        for btn in &self.keys {
+            btn.bounds(sink)
+        }
+    }
 }
 
 pub trait MnemonicInput: Component<Msg = MnemonicInputMsg> {
@@ -157,4 +166,12 @@ pub enum MnemonicInputMsg {
     Confirmed,
     Completed,
     TimedOut,
+}
+
+#[cfg(feature = "ui_debug")]
+impl<T> crate::trace::Trace for MnemonicKeyboard<T> {
+    fn trace(&self, t: &mut dyn crate::trace::Tracer) {
+        t.open("MnemonicKeyboard");
+        t.close();
+    }
 }

@@ -102,8 +102,8 @@ pub fn button_default() -> ButtonStyleSheet {
         },
         active: &ButtonStyle {
             font: FONT_BOLD,
-            text_color: BG,
-            button_color: FG,
+            text_color: FG,
+            button_color: GREY_MEDIUM,
             background_color: BG,
             border_color: FG,
             border_radius: RADIUS,
@@ -291,10 +291,14 @@ pub const KEYBOARD_SPACING: i32 = 8;
 /// +----------+
 /// |    13    |
 /// |  +----+  |
-/// |10|    | 5|
+/// |10|    |10|
 /// |  +----+  |
 /// |    14    |
 /// +----------+
 pub fn borders() -> Rect {
+    constant::screen().inset(Insets::new(13, 10, 14, 10))
+}
+
+pub fn borders_scroll() -> Rect {
     constant::screen().inset(Insets::new(13, 5, 14, 10))
 }
