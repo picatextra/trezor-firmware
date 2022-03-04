@@ -89,34 +89,49 @@ def image_to_tt(filename: str) -> bytes:
     return toif_image.to_bytes()
 
 
+def _should_remove(enable: Optional[bool], remove: bool) -> bool:
+    """Helper to decide whether to remove something or not.
+
+    Needed for backwards compatibility purposes, so we can support
+    both positive (enable) and negative (remove) args.
+    """
+    if remove and enable:
+        raise click.ClickException("Argument and option contradict each other")
+
+    if remove or enable is False:
+        return True
+
+    return False
+
+
 @click.group(name="set")
 def cli() -> None:
     """Device settings."""
 
 
 @cli.command()
-@click.argument(
-    "enable", type=ChoiceType({"enable": True, "disable": False}), default=True
-)
+@click.option("-r", "--remove", is_flag=True, help="DEPRECATED, use on/off argument")
+@click.argument("enable", type=ChoiceType({"on": True, "off": False}), required=False)
 @with_client
-def pin(client: "TrezorClient", enable: bool) -> str:
+def pin(client: "TrezorClient", enable: Optional[bool], remove: bool) -> str:
     """Set, change or remove PIN."""
-    return device.change_pin(client, remove=not enable)
+    # Remove argument is there for backwards compatibility
+    return device.change_pin(client, remove=_should_remove(enable, remove))
 
 
 @cli.command()
-@click.argument(
-    "enable", type=ChoiceType({"enable": True, "disable": False}), default=True
-)
+@click.option("-r", "--remove", is_flag=True, help="DEPRECATED, use on/off argument")
+@click.argument("enable", type=ChoiceType({"on": True, "off": False}), required=False)
 @with_client
-def wipe_code(client: "TrezorClient", enable: bool) -> str:
+def wipe_code(client: "TrezorClient", enable: Optional[bool], remove: bool) -> str:
     """Set or remove the wipe code.
 
     The wipe code functions as a "self-destruct PIN". If the wipe code is ever
     entered into any PIN entry dialog, then all private data will be immediately
     removed and the device will be reset to factory defaults.
     """
-    return device.change_wipe_code(client, remove=not enable)
+    # Remove argument is there for backwards compatibility
+    return device.change_wipe_code(client, remove=_should_remove(enable, remove))
 
 
 @cli.command()
@@ -222,9 +237,7 @@ def safety_checks(
 
 
 @cli.command()
-@click.argument(
-    "enable", type=ChoiceType({"enable": True, "disable": False}), default=True
-)
+@click.argument("enable", type=ChoiceType({"on": True, "off": False}), default=True)
 @with_client
 def experimental_features(client: "TrezorClient", enable: bool) -> str:
     """Enable or disable experimental message types.
@@ -246,7 +259,7 @@ def passphrase() -> None:
     # and "disable-passphrase". Otherwise `passphrase` would just take an argument.
 
 
-@passphrase.command(name="enable")
+@passphrase.command(name="on")
 @click.option("-f/-F", "--force-on-device/--no-force-on-device", default=None)
 @with_client
 def passphrase_enable(client: "TrezorClient", force_on_device: Optional[bool]) -> str:
@@ -256,7 +269,7 @@ def passphrase_enable(client: "TrezorClient", force_on_device: Optional[bool]) -
     )
 
 
-@passphrase.command(name="disable")
+@passphrase.command(name="off")
 @with_client
 def passphrase_disable(client: "TrezorClient") -> str:
     """Disable passphrase."""
