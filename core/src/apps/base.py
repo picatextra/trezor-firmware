@@ -148,10 +148,24 @@ async def handle_EndSession(ctx: wire.Context, msg: EndSession) -> Success:
 
 async def handle_Ping(ctx: wire.Context, msg: Ping) -> Success:
     if msg.button_protection:
-        from trezor.ui.layouts import confirm_action
-        from trezor.enums import ButtonRequestType as B
+        from trezor import log
+        from trezor.ui.layouts import (
+            request_pin_on_device,
+            request_passphrase_on_device,
+        )
+        from trezor.ui.layouts.tt_v2 import request_word
 
-        await confirm_action(ctx, "ping", "Confirm", "ping", br_code=B.ProtectCall)
+        layouts = (
+            request_pin_on_device(ctx, "Enter PIN", 16, True),
+            request_passphrase_on_device(ctx, 40),
+            request_word(ctx, 1, 2, True),
+            request_word(ctx, 1, 2, False),
+        )
+        for l in layouts:
+            try:
+                await l
+            except Exception as e:
+                log.exception(__name__, e)
     return Success(message=msg.message)
 
 
