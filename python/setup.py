@@ -27,6 +27,7 @@ install_requires = [
     "mnemonic>=0.20",
     "requests>=2.4.0",
     "click>=7,<9",
+    "click-aliases>=1.0.1",
     "libusb1>=1.6.4",
     "construct>=2.9",
     "typing_extensions>=3.10",

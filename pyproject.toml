@@ -51,6 +51,7 @@ graphviz = "*"
 
 ## cointool
 click = "^7"
+click-aliases = "^1.0.1"
 ed25519 = "^1.4"
 requests = "^2.19"
 termcolor = "*"

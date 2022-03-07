@@ -17,6 +17,7 @@
 from typing import TYPE_CHECKING, Optional
 
 import click
+from click_aliases import ClickAliasedGroup
 
 from .. import device, firmware, messages, toif
 from . import ChoiceType, with_client
@@ -252,14 +253,17 @@ def experimental_features(client: "TrezorClient", enable: bool) -> str:
 #
 
 
-@cli.group()
+# Using special imported class ClickAliasedGroup, so we can support multiple commands
+# to invoke the same function to keep backwards compatibility
+# Other possibility is to do it manually like this: https://stackoverflow.com/a/53144555
+@cli.group(cls=ClickAliasedGroup)
 def passphrase() -> None:
     """Enable, disable or configure passphrase protection."""
     # this exists in order to support command aliases for "enable-passphrase"
     # and "disable-passphrase". Otherwise `passphrase` would just take an argument.
 
 
-@passphrase.command(name="on")
+@passphrase.command(aliases=["on", "enabled"])
 @click.option("-f/-F", "--force-on-device/--no-force-on-device", default=None)
 @with_client
 def passphrase_enable(client: "TrezorClient", force_on_device: Optional[bool]) -> str:
@@ -269,7 +273,7 @@ def passphrase_enable(client: "TrezorClient", force_on_device: Optional[bool]) -
     )
 
 
-@passphrase.command(name="off")
+@passphrase.command(aliases=["off", "disabled"])
 @with_client
 def passphrase_disable(client: "TrezorClient") -> str:
     """Disable passphrase."""
